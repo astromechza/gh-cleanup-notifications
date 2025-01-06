@@ -70,22 +70,22 @@ func (c *customTripper) RoundTrip(request *http.Request) (*http.Response, error)
 	return resp, err
 }
 
-func shouldMarkNotificationAsRead(client *api.RESTClient, n notification) (bool, error) {
+func shouldMarkNotificationAsRead(client *api.RESTClient, n notification, log *slog.Logger) (bool, error) {
 	u, err := url.Parse(n.Subject.Url)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse subject url for notification: '%s': %w", n.Subject.Url, err)
 	}
 	if u.Path == "" {
-		slog.Info("not marking repo level notification as read", slog.Any("notification", n))
+		log.Info("not marking repo level notification as read", slog.Any("notification", n))
 		return false, nil
 	}
 	u.Path = strings.TrimPrefix(u.Path, "/")
 	var stateResp abstractNotificationSubjectState
-	slog.Info("looking up notification subject", slog.String("subject_path", u.Path))
+	log.Info("looking up notification subject", slog.String("subject_path", u.Path))
 	if err := client.Get(u.Path, &stateResp); err != nil {
 		return false, fmt.Errorf("failed to lookup notification subject: %w", err)
 	}
-	slog.Debug("got notification subject", slog.Any("subject", stateResp))
+	log.Debug("got notification subject", slog.Any("subject", stateResp))
 
 	return stateResp.State == "closed", nil
 }
@@ -105,6 +105,7 @@ func mainError() error {
 	}
 
 	var before string
+	var seen int
 	for {
 		slog.Info("retrieving page of notifications", slog.Int("n", DefaultN), slog.String("before", before))
 		var resp []notification
@@ -113,7 +114,8 @@ func mainError() error {
 		}
 		slog.Debug("got notifications", slog.Int("n", len(resp)), slog.Any("notifications", resp))
 		for _, n := range resp {
-			if mark, err := shouldMarkNotificationAsRead(client, n); err != nil {
+			seen += 1
+			if mark, err := shouldMarkNotificationAsRead(client, n, slog.Default().With(slog.Int("seen", seen))); err != nil {
 				return err
 			} else if mark {
 				threadUrl, err := url.Parse(n.ThreadUrl)
@@ -121,7 +123,7 @@ func mainError() error {
 					return fmt.Errorf("failed to parse thread url '%s': %w", n.ThreadUrl, err)
 				}
 				threadUrl.Path = strings.TrimPrefix(threadUrl.Path, "/")
-				slog.Info("marking notification as read", slog.String("thread_path", threadUrl.Path))
+				slog.Info("marking notification as read", slog.String("thread_path", threadUrl.Path), slog.Int("seen", seen))
 				var out json.RawMessage
 				if err := client.Patch(threadUrl.Path, nil, &out); err != nil {
 					return fmt.Errorf("failed to mark as read: %w", err)

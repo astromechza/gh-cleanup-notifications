@@ -29,3 +29,9 @@ gh cleanup-notifications
 
 For more information on writing extensions:
 https://docs.github.com/github-cli/github-cli/creating-github-cli-extensions
+
+## References
+
+- https://github.com/awendt/gh-cleanup-notifications
+- https://github.com/rnorth/gh-tidy-notifications
+- etc.
