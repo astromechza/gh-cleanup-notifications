@@ -1,5 +1,18 @@
 # gh-cleanup-notifications
 
+A small binary I maintain for myself to cleanup my github notifications using my own custom heuristics. I generally run
+this once or twice a day to help stay on top of all the automated notifications coming through in a busy organisation.
+
+Written in Go because that works nicely with the `gh` cli.
+
+In general, this does:
+
+1. list a page of notifications
+2. for each of (1), perform some initial filtering
+3. for each of (2), lookup the notification subject (PR, issue, release, CI, etc..) and extract it's state
+4. filter by heuristic function
+5. mark the notification thread as read
+
 ## Usage
 
 ```
