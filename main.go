@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -91,6 +92,20 @@ func shouldMarkNotificationAsRead(client *api.RESTClient, n notification, log *s
 }
 
 func mainError() error {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `gh cleanup-notifications [--help]
+
+This GitHub CLI extension reads through all the notifications and marks "complete" ones as read.
+
+Set GH_CLEANUP_NOTIFICATIONS_DEBUG for debug logging.
+`)
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	if flag.NArg() > 0 {
+		return fmt.Errorf("no positional args expected")
+	}
+
 	if v := os.Getenv("GH_CLEANUP_NOTIFICATIONS_DEBUG"); v != "" {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug, AddSource: true})))
 	} else {
