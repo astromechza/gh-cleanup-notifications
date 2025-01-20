@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 )
@@ -148,7 +149,13 @@ Set GH_CLEANUP_NOTIFICATIONS_DEBUG for debug logging.
 		if len(resp) == 0 {
 			break
 		}
-		before = resp[len(resp)-1].UpdatedAt
+		ua := resp[len(resp)-1].UpdatedAt
+		// due to rounding and cursor errors, sometimes the before-at implementation can return the same item again
+		if d, err := time.Parse(time.RFC3339, ua); err == nil {
+			slog.Warn("failed to parse time updated", slog.String("updated-at", ua), slog.String("layout", time.RFC3339), slog.Any("err", err))
+			ua = d.Add(-time.Second).Format(time.RFC3339)
+		}
+		before = ua
 	}
 
 	return nil
